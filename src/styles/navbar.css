@@ -1,0 +1,144 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 15px 60px;
+  background: white;
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: bold;
+  color: #e58e7c;
+}
+
+.nav-links {
+  display: flex;
+  gap: 25px;
+  list-style: none;
+  font-size: 14px;
+}
+
+.search-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  background: #f5f1ee;
+  padding: 10px 15px;
+  border-radius: 12px;
+
+  width: 350px;
+}
+
+.search-area input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+}
+
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.nav-icons button {
+  background: #e58e7c;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: white;
+}
+
+
+
+
+.navbar-left h2{
+    font-size:24px;
+}
+
+.navbar-right{
+    display:flex;
+    align-items:center;
+    gap:20px;
+}
+
+.search-box{
+    width:250px;
+    padding:10px 15px;
+    border:1px solid #ddd;
+    border-radius:8px;
+}
+
+.profile-img{
+    width:42px;
+    height:42px;
+    border-radius:50%;
+}
+.cart-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e58e7c;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+
+  border-radius: 999px;
+  border: 2px solid white;
+}
+.cart-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #e58e7c;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+
+  border-radius: 999px;
+  border: 2px solid white;
+}
