@@ -51,31 +51,49 @@ class User {
         };
     }
 
-    // Find user by email or username (used for login -- includes password hash)
+    // Find user by email or username (used for login -- includes password hash).
+    // Deliberately includes soft-deleted accounts: the login controller needs
+    // to verify the password first and only then check is_deleted, so it can
+    // show a clear "account deactivated" message instead of just failing
+    // silently with a generic invalid-credentials error.
     static async findByEmailOrUsername(identifier) {
         const query = `SELECT * FROM User WHERE email = ? OR username = ?`;
         const [rows] = await pool.execute(query, [identifier, identifier]);
         return rows[0] || null;
     }
 
-    // Find user by ID (no password returned)
-    static async findById(userId) {
-        const query = `
-            SELECT user_id, full_name, email, username,
-                   phone_number, address, gender, date_of_birth, role, created_at
-            FROM User WHERE user_id = ?
-        `;
+    // Find user by ID (no password returned). Soft-deleted accounts are
+    // treated as not found unless includeDeleted is passed (used internally
+    // by the admin delete/restore flow, which needs to look the user up
+    // regardless of their current deleted state).
+    static async findById(userId, { includeDeleted = false } = {}) {
+        const query = includeDeleted
+            ? `SELECT user_id, full_name, email, username,
+                      phone_number, address, gender, date_of_birth, role,
+                      is_deleted, deleted_at, created_at
+               FROM User WHERE user_id = ?`
+            : `SELECT user_id, full_name, email, username,
+                      phone_number, address, gender, date_of_birth, role,
+                      is_deleted, deleted_at, created_at
+               FROM User WHERE user_id = ? AND is_deleted = 0`;
         const [rows] = await pool.execute(query, [userId]);
         return rows[0] || null;
     }
 
-    // Get all users (for admin dashboard)
-    static async getAll() {
-        const query = `
+    // Get all users (for admin dashboard). By default, soft-deleted users
+    // are excluded. Pass includeDeleted: true to include them too (so the
+    // admin panel can list them and offer a restore option).
+    static async getAll({ includeDeleted = false } = {}) {
+        let query = `
             SELECT user_id, full_name, email, username,
-                   phone_number, address, gender, role, created_at
-            FROM User ORDER BY created_at DESC
+                   phone_number, address, gender, role,
+                   is_deleted, deleted_at, created_at
+            FROM User
         `;
+        if (!includeDeleted) {
+            query += ' WHERE is_deleted = 0';
+        }
+        query += ' ORDER BY created_at DESC';
         const [rows] = await pool.execute(query);
         return rows;
     }
@@ -101,9 +119,21 @@ class User {
         return result;
     }
 
-    // Delete a user (admin action)
+    // Soft-delete a user (admin action): the account disappears from login
+    // and customer listings, but the row itself stays put so existing
+    // orders (and any historical reference to it, e.g. Orders.user_id)
+    // keep working instead of breaking or vanishing from admin reports.
     static async delete(userId) {
-        const query = 'DELETE FROM User WHERE user_id = ?';
+        const query = 'UPDATE User SET is_deleted = 1, deleted_at = NOW() WHERE user_id = ?';
+        const [result] = await pool.execute(query, [userId]);
+        return result;
+    }
+
+    // Restore a previously soft-deleted user account so it can log in and
+    // show up in listings again. The row was never touched by the delete,
+    // so this is just flipping the flag back.
+    static async restore(userId) {
+        const query = 'UPDATE User SET is_deleted = 0, deleted_at = NULL WHERE user_id = ?';
         const [result] = await pool.execute(query, [userId]);
         return result;
     }

@@ -1,11 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { FaUser, FaBox, FaSignOutAlt } from "react-icons/fa";
+import { FaTachometerAlt, FaUser, FaBox, FaSignOutAlt } from "react-icons/fa";
 
-// Only "My Profile" and "Order History" are wired up to real pages for now.
-// More items (wishlist, addresses, payments, settings) will be added once
-// those features exist -- keeping the sidebar limited avoids dead links.
+// Only "Dashboard", "My Profile" and "Order History" are wired up to real
+// pages for now. More items (wishlist, addresses, payments, settings) will
+// be added once those features exist -- keeping the sidebar limited avoids
+// dead links.
 const MENU_ITEMS = [
-  { key: "profile", label: "My Profile", icon: <FaUser />, path: "/user" },
+  { key: "dashboard", label: "Dashboard", icon: <FaTachometerAlt />, path: "/user" },
+  { key: "profile", label: "My Profile", icon: <FaUser />, path: "/user/profile" },
   { key: "orders", label: "Order History", icon: <FaBox />, path: "/user/orders" },
 ];
 

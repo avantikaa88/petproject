@@ -1,14 +1,70 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { FaSearch, FaShoppingCart } from "react-icons/fa";
+import { FaSearch, FaShoppingCart, FaChevronDown } from "react-icons/fa";
 import api from "../api/axios";
 import { getGuestCartCount } from "../utils/guestCart";
 import { CART_UPDATED_EVENT } from "../utils/cartEvents";
 import "../styles/navbar.css";
 
-function Navbar() {
+function Navbar({
+  categories,
+  selectedCategories = [],
+  onCategoryToggle,
+  onClearCategories,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const categoryMenuRef = useRef(null);
+
+  // The Shop page passes down its own product-derived category list (and
+  // handlers to filter in place). Every other page renders without those
+  // props, so the navbar fetches the full category list itself — that way
+  // "Categories" shows up no matter where you are, not just on Shop.
+  const [fetchedCategories, setFetchedCategories] = useState([]);
+  const isInteractive = typeof onCategoryToggle === "function";
+  const displayCategories = categories ?? fetchedCategories;
+
+  useEffect(() => {
+    if (categories !== undefined) return; // Shop already supplied its own list
+    let cancelled = false;
+    api
+      .get("/categories")
+      .then((res) => {
+        if (!cancelled && res.data.success) {
+          setFetchedCategories(res.data.categories.map((c) => c.name));
+        }
+      })
+      .catch((err) => console.error("Failed to load categories:", err));
+    return () => {
+      cancelled = true;
+    };
+  }, [categories]);
+
+  // On any page other than Shop, picking a category jumps to Shop
+  // pre-filtered by it, since there's no local product list to filter here.
+  const handleCategoryClick = (category) => {
+    if (isInteractive) {
+      onCategoryToggle(category);
+      return;
+    }
+    setCategoryMenuOpen(false);
+    navigate(`/shop?category=${encodeURIComponent(category)}`);
+  };
+
+  // Close the category dropdown when clicking anywhere outside of it.
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        categoryMenuRef.current &&
+        !categoryMenuRef.current.contains(e.target)
+      ) {
+        setCategoryMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Logged in if we have a token saved from a previous login/register
   const token = localStorage.getItem("token");
@@ -86,8 +142,54 @@ function Navbar() {
       <ul className="nav-links">
         <li onClick={handleHomeClick}>Home</li>
         <li onClick={() => navigate("/shop")}>Shop</li>
-         <li onClick={() => navigate("/contact")}>Contact</li>
-        
+
+        {displayCategories.length > 0 && (
+          <li className="nav-dropdown" ref={categoryMenuRef}>
+            <span
+              className="nav-dropdown-toggle"
+              onClick={() => setCategoryMenuOpen((prev) => !prev)}
+            >
+              Categories <FaChevronDown className="nav-dropdown-caret" />
+            </span>
+
+            {categoryMenuOpen && (
+              <div className="nav-dropdown-menu">
+                {displayCategories.map((category) =>
+                  isInteractive ? (
+                    <label className="nav-dropdown-item" key={category}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.includes(category)}
+                        onChange={() => handleCategoryClick(category)}
+                      />
+                      {category}
+                    </label>
+                  ) : (
+                    <button
+                      type="button"
+                      className="nav-dropdown-item nav-dropdown-link"
+                      key={category}
+                      onClick={() => handleCategoryClick(category)}
+                    >
+                      {category}
+                    </button>
+                  )
+                )}
+                {isInteractive && selectedCategories.length > 0 && (
+                  <button
+                    type="button"
+                    className="nav-dropdown-clear"
+                    onClick={() => onClearCategories?.()}
+                  >
+                    Clear categories
+                  </button>
+                )}
+              </div>
+            )}
+          </li>
+        )}
+
+        <li onClick={() => navigate("/contact")}>Contact</li>
       </ul>
 
       <div className="search-area">

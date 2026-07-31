@@ -15,9 +15,16 @@ class Product {
     }
 
     // Get all products with optional filters (category, price range, search text)
+    // By default, soft-deleted products are excluded. Pass includeDeleted:
+    // true to include them too (e.g. for admin tooling that needs to see
+    // everything).
     static async getAll(filters = {}) {
         let query = 'SELECT * FROM Product WHERE 1=1';
         const values = [];
+
+        if (!filters.includeDeleted) {
+            query += ' AND is_deleted = 0';
+        }
 
         if (filters.category) {
             query += ' AND category = ?';
@@ -45,9 +52,13 @@ class Product {
         return rows;
     }
 
-    // Get a single product by ID
-    static async findById(product_id) {
-        const query = 'SELECT * FROM Product WHERE product_id = ?';
+    // Get a single product by ID. Soft-deleted products are treated as not
+    // found unless includeDeleted is passed (used internally by the delete
+    // flow itself, which needs to look the product up before deleting it).
+    static async findById(product_id, { includeDeleted = false } = {}) {
+        const query = includeDeleted
+            ? 'SELECT * FROM Product WHERE product_id = ?'
+            : 'SELECT * FROM Product WHERE product_id = ? AND is_deleted = 0';
         const [rows] = await pool.execute(query, [product_id]);
         return rows[0] || null;
     }
@@ -73,9 +84,20 @@ class Product {
         return result;
     }
 
-    // Delete a product
+    // Soft-delete a product: it disappears from every product listing, but
+    // the row itself stays put so existing orders (and any historical
+    // reference to it) keep working. See migrations/002_soft_delete_products.sql.
     static async delete(product_id) {
-        const query = 'DELETE FROM Product WHERE product_id = ?';
+        const query = 'UPDATE Product SET is_deleted = 1, deleted_at = NOW() WHERE product_id = ?';
+        const [result] = await pool.execute(query, [product_id]);
+        return result;
+    }
+
+    // Restore a previously soft-deleted product so it shows up in listings
+    // again. The row (and its images) were never touched by the delete, so
+    // this is just flipping the flag back.
+    static async restore(product_id) {
+        const query = 'UPDATE Product SET is_deleted = 0, deleted_at = NULL WHERE product_id = ?';
         const [result] = await pool.execute(query, [product_id]);
         return result;
     }

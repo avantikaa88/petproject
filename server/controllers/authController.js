@@ -65,6 +65,17 @@ exports.login = async (req, res) => {
             return res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
 
+        // Password is correct, but the account has been soft-deleted by an
+        // admin -- checked *after* the password so we don't reveal a
+        // deactivated account's existence to someone who doesn't know the
+        // password.
+        if (user.is_deleted) {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account has been deactivated. Please contact support for help.'
+            });
+        }
+
         const token = generateToken(user.user_id, user.email, user.role);
         const { password: _, ...userWithoutPassword } = user;
 

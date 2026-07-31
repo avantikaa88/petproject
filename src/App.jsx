@@ -7,6 +7,7 @@ import Checkout from "./pages/Checkout";
 import Contact from "./pages/Contact";
 import AuthContainer from "./containers/AuthContainer";
 import UserDashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import OrderHistory from "./pages/OrderHistory";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./admin/layouts/AdminLayout";
@@ -14,6 +15,7 @@ import AdminDashboard from "./admin/pages/Dashboard";
 import AdminProducts from "./admin/pages/Products";
 import AdminCategories from "./admin/pages/Categories";
 import AdminOrders from "./admin/pages/Orders";
+import AdminOrderDetail from "./admin/pages/OrderDetail";
 import AdminUsers from "./admin/pages/Users";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
@@ -34,6 +36,7 @@ function App() {
       {/* Protected: any logged-in user */}
       <Route element={<ProtectedRoute />}>
         <Route path="/user" element={<UserDashboard />} />
+        <Route path="/user/profile" element={<Profile />} />
         <Route path="/user/orders" element={<OrderHistory />} />
         <Route path="/checkout" element={<Checkout />} />
       </Route>
@@ -45,6 +48,7 @@ function App() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="orders" element={<AdminOrders />} />
+          <Route path="orders/:id" element={<AdminOrderDetail />} />
           <Route path="users" element={<AdminUsers />} />
         </Route>
       </Route>

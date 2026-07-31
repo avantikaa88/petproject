@@ -10,6 +10,7 @@ import {
   FaTrash,
   FaChevronLeft,
   FaChevronRight,
+  FaTrashRestore,
 } from "react-icons/fa";
 import api from "../../api/axios";
 import ProductForm, { resolveImageSrc } from "../components/ProductForm";
@@ -33,7 +34,9 @@ export default function Products() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/products");
+      // Admin listing includes soft-deleted products (unlike the public
+      // /products endpoint) so deleted items can still be found and restored.
+      const res = await api.get("/products/admin/all");
       if (res.data.success) setProducts((res.data.products || []).filter(Boolean));
     } catch (err) {
       console.error("Failed to load products:", err);
@@ -179,6 +182,17 @@ export default function Products() {
     }
   };
 
+  const handleRestore = async (product) => {
+    try {
+      await api.patch(`/products/${product.product_id}/restore`);
+      toast.success(`"${product.name}" restored`);
+      loadProducts();
+    } catch (err) {
+      console.error("Failed to restore product:", err);
+      toast.error(err.response?.data?.message || "Could not restore product");
+    }
+  };
+
   const formatCurrency = (amount) =>
     `Rs. ${Number(amount).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
@@ -258,13 +272,15 @@ export default function Products() {
               <tbody>
                 {paginatedProducts.map((product) => {
                   const stockInfo = getStockStatus(product.stock);
+                  const isDeleted = !!product.is_deleted;
                   return (
-                    <tr key={product.product_id}>
+                    <tr key={product.product_id} className={isDeleted ? "admin-row-deleted" : ""}>
                       <td>
                         <input
                           type="checkbox"
                           checked={selectedIds.includes(product.product_id)}
                           onChange={() => toggleSelectOne(product.product_id)}
+                          disabled={isDeleted}
                         />
                       </td>
                       <td>
@@ -279,7 +295,12 @@ export default function Products() {
                         )}
                       </td>
                       <td>
-                        <div className="admin-product-name">{product.name}</div>
+                        <div className="admin-product-name">
+                          {product.name}
+                          {isDeleted && (
+                            <span className="category-pill admin-deleted-badge">Deleted</span>
+                          )}
+                        </div>
                         <div className="admin-product-sku">
                           #{String(product.product_id).padStart(3, "0")}
                         </div>
@@ -300,22 +321,35 @@ export default function Products() {
                       <td className="admin-product-price">{formatCurrency(product.price)}</td>
                       <td>
                         <div className="admin-row-actions">
-                          <button
-                            className="icon-btn"
-                            onClick={() => openEditForm(product)}
-                            title="Edit product"
-                            aria-label="Edit product"
-                          >
-                            <FaEdit />
-                          </button>
-                          <button
-                            className="icon-btn danger"
-                            onClick={() => handleDelete(product)}
-                            title="Delete product"
-                            aria-label="Delete product"
-                          >
-                            <FaTrash />
-                          </button>
+                          {isDeleted ? (
+                            <button
+                              className="icon-btn"
+                              onClick={() => handleRestore(product)}
+                              title="Restore product"
+                              aria-label="Restore product"
+                            >
+                              <FaTrashRestore />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className="icon-btn"
+                                onClick={() => openEditForm(product)}
+                                title="Edit product"
+                                aria-label="Edit product"
+                              >
+                                <FaEdit />
+                              </button>
+                              <button
+                                className="icon-btn danger"
+                                onClick={() => handleDelete(product)}
+                                title="Delete product"
+                                aria-label="Delete product"
+                              >
+                                <FaTrash />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

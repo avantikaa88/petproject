@@ -9,6 +9,7 @@ router.put('/me', protect, userController.updateMe);
 
 // Admin-only: manage all users
 router.get('/', protect, isAdmin, userController.getAllUsers);
+router.patch('/:id/restore', protect, isAdmin, userController.restoreUser);
 router.delete('/:id', protect, isAdmin, userController.deleteUser);
 
 module.exports = router;

@@ -1377,3 +1377,59 @@
 .recent-order-details-link:hover {
     text-decoration: underline;
 }
+/* ---------- Order Detail page ---------- */
+.order-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+}
+
+.order-detail-summary p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #222;
+}
+
+.order-detail-total {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff7f50;
+}
+
+.order-detail-product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.order-detail-items-total-label {
+    text-align: right;
+    font-weight: 600;
+    color: #666;
+}
+
+.order-detail-items-total-value {
+    font-weight: 700;
+    color: #222;
+}
+/* ---------- Confirmation modal (ConfirmDialog.jsx) ---------- */
+.admin-confirm-modal {
+    max-width: 420px;
+}
+
+.admin-confirm-message {
+    color: #444;
+    line-height: 1.5;
+    margin: 10px 0 4px;
+}
+/* Soft-deleted product row (admin panel) */
+.admin-row-deleted {
+    opacity: 0.6;
+    background: #fafafa;
+}
+
+.admin-deleted-badge {
+    margin-left: 8px;
+    background: #fde2e1;
+    color: #b3261e;
+}

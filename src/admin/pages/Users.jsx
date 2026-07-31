@@ -9,13 +9,15 @@ export default function Users() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [restoringId, setRestoringId] = useState(null);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
       const res = await api.get("/users");
       if (res.data.success) {
-        // Filter out admins - only keep customers
+        // Filter out admins - only keep customers (this now includes
+        // soft-deleted customers too, so they can be restored)
         const customers = res.data.users.filter(user => user.role === 'customer');
         setUsers(customers);
       }
@@ -55,7 +57,7 @@ export default function Users() {
   const handleDelete = async (user) => {
     if (
       !window.confirm(
-        `Delete user "${user.full_name}"? This cannot be undone.`
+        `Delete user "${user.full_name}"? Their order history is kept, and you can restore the account later.`
       )
     ) {
       return;
@@ -64,13 +66,35 @@ export default function Users() {
     setDeletingId(user.user_id);
     try {
       await api.delete(`/users/${user.user_id}`);
-      setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === user.user_id ? { ...u, is_deleted: 1 } : u
+        )
+      );
       toast.success("User deleted");
     } catch (err) {
       console.error("Failed to delete user:", err);
       toast.error(err.response?.data?.message || "Could not delete user");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleRestore = async (user) => {
+    setRestoringId(user.user_id);
+    try {
+      await api.patch(`/users/${user.user_id}/restore`);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.user_id === user.user_id ? { ...u, is_deleted: 0 } : u
+        )
+      );
+      toast.success(`"${user.full_name}" restored`);
+    } catch (err) {
+      console.error("Failed to restore user:", err);
+      toast.error(err.response?.data?.message || "Could not restore user");
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -118,34 +142,52 @@ export default function Users() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.user_id}>
-                  <td>#{user.user_id}</td>
-                  <td>{user.full_name}</td>
-                  <td>{user.username}</td>
-                  <td>{user.email}</td>
-                  <td>{user.phone_number || "—"}</td>
-                  <td className="admin-address-cell" title={user.address || ""}>
-                    {user.address || "—"}
-                  </td>
-                  <td>{user.gender || "—"}</td>
-                  <td>
-                    <span className={`role-badge role-${user.role}`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td>{formatDate(user.created_at)}</td>
-                  <td>
-                    <button
-                      className="admin-btn admin-btn-danger"
-                      disabled={deletingId === user.user_id}
-                      onClick={() => handleDelete(user)}
-                    >
-                      {deletingId === user.user_id ? "Deleting..." : "Delete"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {filteredUsers.map((user) => {
+                const isDeleted = !!user.is_deleted;
+                return (
+                  <tr key={user.user_id} className={isDeleted ? "admin-row-deleted" : ""}>
+                    <td>#{user.user_id}</td>
+                    <td>
+                      {user.full_name}
+                      {isDeleted && (
+                        <span className="category-pill admin-deleted-badge">Deleted</span>
+                      )}
+                    </td>
+                    <td>{user.username}</td>
+                    <td>{user.email}</td>
+                    <td>{user.phone_number || "—"}</td>
+                    <td className="admin-address-cell" title={user.address || ""}>
+                      {user.address || "—"}
+                    </td>
+                    <td>{user.gender || "—"}</td>
+                    <td>
+                      <span className={`role-badge role-${user.role}`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td>{formatDate(user.created_at)}</td>
+                    <td>
+                      {isDeleted ? (
+                        <button
+                          className="admin-btn admin-btn-outline"
+                          disabled={restoringId === user.user_id}
+                          onClick={() => handleRestore(user)}
+                        >
+                          {restoringId === user.user_id ? "Restoring..." : "Restore"}
+                        </button>
+                      ) : (
+                        <button
+                          className="admin-btn admin-btn-danger"
+                          disabled={deletingId === user.user_id}
+                          onClick={() => handleDelete(user)}
+                        >
+                          {deletingId === user.user_id ? "Deleting..." : "Delete"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

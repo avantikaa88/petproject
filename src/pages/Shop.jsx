@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  FaFilter,
-  FaTh,
-  FaList,
-  FaChevronLeft,
-  FaChevronRight,
-  FaShoppingCart,
-} from "react-icons/fa";
+import { useNavigate, useLocation } from "react-router-dom";
+import { FaShoppingCart } from "react-icons/fa";
 import { toast } from "react-toastify";
 import api from "../api/axios";
 import { addToGuestCart } from "../utils/guestCart";
@@ -26,11 +19,11 @@ const resolveImageSrc = (imageUrl) => {
   return `${SERVER_ORIGIN}${imageUrl}`;
 };
 
-const PAGE_SIZE = 10; // Changed from 9 to 10
 const NEW_WINDOW_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 export default function Shop() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,14 +31,10 @@ export default function Shop() {
 
   // Filters
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [priceMin, setPriceMin] = useState("");
-  const [priceMax, setPriceMax] = useState("");
-  const [stockFilter, setStockFilter] = useState("all"); // all | inStock | outOfStock
 
   // Display controls
   const [sortBy, setSortBy] = useState("recommended");
-  const [viewMode, setViewMode] = useState("grid"); // grid | list
-  const [currentPage, setCurrentPage] = useState(1);
+  const viewMode = "grid"; // list view's toggle lived in the removed header bar
 
   // Add-to-cart feedback, keyed by product_id
   const [cartStatus, setCartStatus] = useState({});
@@ -71,22 +60,23 @@ export default function Shop() {
     return Array.from(set).sort();
   }, [products]);
 
+  // Clicking a category from the navbar on any other page lands here as
+  // /shop?category=Name — pick that up so the grid arrives pre-filtered.
+  useEffect(() => {
+    const category = new URLSearchParams(location.search).get("category");
+    if (category) {
+      setSelectedCategories((prev) =>
+        prev.includes(category) ? prev : [...prev, category]
+      );
+    }
+  }, [location.search]);
+
   const toggleCategory = (category) => {
-    setCurrentPage(1);
     setSelectedCategories((prev) =>
       prev.includes(category)
         ? prev.filter((c) => c !== category)
         : [...prev, category]
     );
-  };
-
-  const clearAll = () => {
-    setSelectedCategories([]);
-    setPriceMin("");
-    setPriceMax("");
-    setStockFilter("all");
-    setSortBy("recommended");
-    setCurrentPage(1);
   };
 
   const filteredProducts = useMemo(() => {
@@ -97,16 +87,10 @@ export default function Shop() {
       ) {
         return false;
       }
-      const price = Number(p.price);
-      if (priceMin !== "" && price < Number(priceMin)) return false;
-      if (priceMax !== "" && price > Number(priceMax)) return false;
-
-      if (stockFilter === "inStock" && Number(p.stock) <= 0) return false;
-      if (stockFilter === "outOfStock" && Number(p.stock) > 0) return false;
 
       return true;
     });
-  }, [products, selectedCategories, priceMin, priceMax, stockFilter]);
+  }, [products, selectedCategories]);
 
   const sortedProducts = useMemo(() => {
     const list = [...filteredProducts];
@@ -125,10 +109,7 @@ export default function Shop() {
     }
   }, [filteredProducts, sortBy]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const startIndex = (safePage - 1) * PAGE_SIZE;
-  const currentItems = sortedProducts.slice(startIndex, startIndex + PAGE_SIZE);
+  const currentItems = sortedProducts;
 
   const formatPrice = (amount) =>
     `NPR ${Number(amount).toLocaleString("en-US")}`;
@@ -169,20 +150,14 @@ export default function Shop() {
     }
   };
 
-  const goToPage = (page) => {
-    const clamped = Math.min(Math.max(page, 1), totalPages);
-    setCurrentPage(clamped);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const viewedCount = Math.min(startIndex + currentItems.length, sortedProducts.length);
-  const viewedPercent = sortedProducts.length
-    ? Math.round((viewedCount / sortedProducts.length) * 100)
-    : 0;
-
   return (
     <div className="shop-page">
-      <Navbar />
+      <Navbar
+        categories={categories}
+        selectedCategories={selectedCategories}
+        onCategoryToggle={toggleCategory}
+        onClearCategories={() => setSelectedCategories([])}
+      />
 
       <div className="shop-breadcrumb">
         <span onClick={() => navigate("/")}>Home</span> / <span>Shop</span> /{" "}
@@ -190,129 +165,19 @@ export default function Shop() {
       </div>
 
       <div className="shop-layout">
-        {/* ---------- Sidebar filters ---------- */}
-        <aside className="shop-filters">
-          <div className="shop-filters-header">
-            <h3>
-              <FaFilter /> Filters
-            </h3>
-            <button className="shop-clear-all" onClick={clearAll}>
-              Clear All
-            </button>
-          </div>
-
-          <div className="shop-filter-group">
-            <p className="shop-filter-label">Categories</p>
-            {categories.length === 0 ? (
-              <p className="shop-filter-empty">No categories yet</p>
-            ) : (
-              categories.map((category) => (
-                <label className="shop-checkbox" key={category}>
-                  <input
-                    type="checkbox"
-                    checked={selectedCategories.includes(category)}
-                    onChange={() => toggleCategory(category)}
-                  />
-                  {category}
-                </label>
-              ))
-            )}
-          </div>
-
-          <div className="shop-filter-group">
-            <p className="shop-filter-label">Price Range (NPR)</p>
-            <div className="shop-price-inputs">
-              <input
-                type="number"
-                min="0"
-                placeholder="Min"
-                value={priceMin}
-                onChange={(e) => {
-                  setCurrentPage(1);
-                  setPriceMin(e.target.value);
-                }}
-              />
-              <span>-</span>
-              <input
-                type="number"
-                min="0"
-                placeholder="Max"
-                value={priceMax}
-                onChange={(e) => {
-                  setCurrentPage(1);
-                  setPriceMax(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="shop-filter-group">
-            <p className="shop-filter-label">Availability</p>
-            {[
-              { value: "all", label: "All" },
-              { value: "inStock", label: "In Stock" },
-              { value: "outOfStock", label: "Out of Stock" },
-            ].map((opt) => (
-              <label className="shop-checkbox" key={opt.value}>
-                <input
-                  type="radio"
-                  name="stockFilter"
-                  checked={stockFilter === opt.value}
-                  onChange={() => {
-                    setCurrentPage(1);
-                    setStockFilter(opt.value);
-                  }}
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
-        </aside>
-
         {/* ---------- Main content ---------- */}
         <main className="shop-main">
-          <div className="shop-main-header">
+          <div className="shop-heading">
             <div>
-              <h2>Supplies for Your Furry Friends</h2>
-              <p className="shop-results-count">
-                {sortedProducts.length === 0
-                  ? "No products found"
-                  : `Showing ${startIndex + 1}-${Math.min(
-                      startIndex + PAGE_SIZE,
-                      sortedProducts.length
-                    )} of ${sortedProducts.length} products found`}
-              </p>
+              <span className="shop-eyebrow">Shop</span>
+              <h1>All Supplies</h1>
             </div>
-
-            <div className="shop-main-controls">
-              <div className="shop-view-toggle">
-                <button
-                  className={viewMode === "grid" ? "active" : ""}
-                  onClick={() => setViewMode("grid")}
-                  aria-label="Grid view"
-                >
-                  <FaTh />
-                </button>
-                <button
-                  className={viewMode === "list" ? "active" : ""}
-                  onClick={() => setViewMode("list")}
-                  aria-label="List view"
-                >
-                  <FaList />
-                </button>
-              </div>
-
-              <select
-                className="shop-sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="recommended">Sort: Recommended</option>
-                <option value="priceLow">Price: Low to High</option>
-                <option value="priceHigh">Price: High to Low</option>
-                <option value="nameAZ">Name: A-Z</option>
-              </select>
-            </div>
+            {!loading && !error && (
+              <span className="shop-heading-count">
+                {sortedProducts.length} product
+                {sortedProducts.length === 1 ? "" : "s"}
+              </span>
+            )}
           </div>
 
           {loading ? (
@@ -338,19 +203,21 @@ export default function Shop() {
                     style={{ cursor: "pointer" }}
                   >
                     <div className="shop-card-image">
-                      {isNewProduct(product) && (
-                        <span className="shop-badge shop-badge-new">New</span>
-                      )}
-                      {outOfStock && (
-                        <span className="shop-badge shop-badge-out">
-                          Out of Stock
-                        </span>
-                      )}
-                      {lowStock && (
-                        <span className="shop-badge shop-badge-low">
-                          Low Stock
-                        </span>
-                      )}
+                      <div className="shop-badge-stack">
+                        {isNewProduct(product) && (
+                          <span className="shop-badge shop-badge-new">New</span>
+                        )}
+                        {outOfStock && (
+                          <span className="shop-badge shop-badge-out">
+                            Out of Stock
+                          </span>
+                        )}
+                        {lowStock && (
+                          <span className="shop-badge shop-badge-low">
+                            Low Stock
+                          </span>
+                        )}
+                      </div>
                       {product.image_url ? (
                         <img
                           src={resolveImageSrc(product.image_url)}
@@ -363,9 +230,9 @@ export default function Shop() {
 
                     <div className="shop-card-body">
                       {product.category && (
-                        <p className="shop-card-category">
-                          {product.category.toUpperCase()}
-                        </p>
+                        <span className="shop-card-category">
+                          {product.category}
+                        </span>
                       )}
                       <h4 className="shop-card-name">{product.name}</h4>
                       {viewMode === "list" && product.description && (
@@ -399,53 +266,6 @@ export default function Shop() {
                 );
               })}
             </div>
-          )}
-
-          {!loading && !error && sortedProducts.length > 0 && (
-            <>
-              <div className="shop-pagination">
-                <button
-                  onClick={() => goToPage(safePage - 1)}
-                  disabled={safePage === 1}
-                  aria-label="Previous page"
-                >
-                  <FaChevronLeft />
-                </button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <button
-                      key={page}
-                      className={page === safePage ? "active" : ""}
-                      onClick={() => goToPage(page)}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
-
-                <button
-                  onClick={() => goToPage(safePage + 1)}
-                  disabled={safePage === totalPages}
-                  aria-label="Next page"
-                >
-                  <FaChevronRight />
-                </button>
-              </div>
-
-              <div className="shop-progress">
-                <div className="shop-progress-track">
-                  <div
-                    className="shop-progress-fill"
-                    style={{ width: `${viewedPercent}%` }}
-                  />
-                </div>
-                <p>
-                  You've viewed {viewedCount} out of {sortedProducts.length}{" "}
-                  items
-                </p>
-              </div>
-            </>
           )}
         </main>
       </div>

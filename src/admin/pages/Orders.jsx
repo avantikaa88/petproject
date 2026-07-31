@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
 import api from "../../api/axios";
 import { resolveImageSrc } from "../components/ProductForm";
 import "../../styles/admin.css";
@@ -89,6 +90,7 @@ export default function Orders() {
                 <th>Shipping Address</th>
                 <th>Payment</th>
                 <th>Status</th>
+                <th>Details</th>
               </tr>
             </thead>
             <tbody>
@@ -157,6 +159,14 @@ export default function Orders() {
                         ))}
                       </select>
                     )}
+                  </td>
+                  <td>
+                    <Link
+                      to={`/admin/orders/${order.order_id}`}
+                      className="recent-order-details-link"
+                    >
+                      Details
+                    </Link>
                   </td>
                 </tr>
               ))}

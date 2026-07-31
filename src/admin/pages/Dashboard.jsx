@@ -152,7 +152,10 @@ export default function Dashboard() {
                     </span>
                   </td>
                   <td className="recent-orders-actions-col">
-                    <Link to="/admin/orders" className="recent-order-details-link">
+                    <Link
+                      to={`/admin/orders/${order.order_id}`}
+                      className="recent-order-details-link"
+                    >
                       Details
                     </Link>
                   </td>

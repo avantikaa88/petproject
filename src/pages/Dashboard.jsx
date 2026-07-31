@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaBoxOpen, FaClipboardList } from "react-icons/fa";
+import { FaBoxOpen, FaClipboardList, FaChevronRight } from "react-icons/fa";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/dashboard.css";
+import "../styles/orderhistory.css";
 
 const API_BASE = "http://localhost:5000/api";
 
 // Orders with these statuses count as "active" (not yet finished or cancelled)
 const ACTIVE_STATUSES = ["pending", "processing", "shipped"];
+
+// How many recent orders to preview on the dashboard -- the full list
+// lives on the Order History page.
+const RECENT_ORDERS_LIMIT = 3;
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -36,6 +41,8 @@ function Dashboard() {
           axios.get(`${API_BASE}/orders`, authHeader),
         ]);
 
+        // Only the display name is used here (for the greeting) -- the rest
+        // of the user's personal details live on the My Profile page.
         if (profileRes.data.success) {
           setUser(profileRes.data.user);
         }
@@ -90,6 +97,10 @@ function Dashboard() {
   const formatCurrency = (amount) =>
     `NPR ${Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
+  const recentOrders = [...orders]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, RECENT_ORDERS_LIMIT);
+
   return (
     <>
       <Navbar />
@@ -104,7 +115,7 @@ function Dashboard() {
         </div>
 
         <div className="dashboard-container">
-          <Sidebar user={user} activeItem="profile" onSignOut={handleSignOut} />
+          <Sidebar user={user} onSignOut={handleSignOut} />
 
           <div className="main-content">
             {/* Stats -- both pulled from real order data */}
@@ -130,64 +141,34 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Profile Section */}
-            <div className="profile-card">
-              <div className="profile-card-header">
-                <div>
-                  <h2>Personal Information</h2>
-                  <p className="muted">
-                    This is the information on your PawShop account.
-                  </p>
-                </div>
-              </div>
-
-              <div className="information">
-                <div className="info-field">
-                  <span className="label">Full Name</span>
-                  <span className="value">{user?.full_name || "—"}</span>
-                </div>
-
-                <div className="info-field">
-                  <span className="label">Email Address</span>
-                  <span className="value">{user?.email || "—"}</span>
-                </div>
-
-                <div className="info-field">
-                  <span className="label">Username</span>
-                  <span className="value">{user?.username || "—"}</span>
-                </div>
-
-                <div className="info-field">
-                  <span className="label">Phone Number</span>
-                  <span className="value">{user?.phone_number || "—"}</span>
-                </div>
-
-                <div className="info-field">
-                  <span className="label">Gender</span>
-                  <span className="value">{user?.gender || "—"}</span>
-                </div>
-
-                <div className="info-field">
-                  <span className="label">Date of Birth</span>
-                  <span className="value">{formatDate(user?.date_of_birth)}</span>
-                </div>
-
-                <div className="info-field">
-                  <span className="label">Address</span>
-                  <span className="value">{user?.address || "—"}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Order History -- real orders from the database */}
+            {/* Recent activity -- a short preview only; the full, searchable
+                list lives on the Order History page. */}
             <div className="orders-section">
-              <h2>Order History</h2>
+              <div className="orders-toolbar">
+                <h2>Recent Orders</h2>
+                {orders.length > 0 && (
+                  <Link
+                    to="/user/orders"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      color: "#d9825f",
+                      fontWeight: 600,
+                      fontSize: "14px",
+                      textDecoration: "none",
+                    }}
+                  >
+                    View all <FaChevronRight size={11} />
+                  </Link>
+                )}
+              </div>
 
-              {orders.length === 0 ? (
+              {recentOrders.length === 0 ? (
                 <p className="muted">You haven't placed any orders yet.</p>
               ) : (
                 <div className="orders-list">
-                  {orders.map((order) => (
+                  {recentOrders.map((order) => (
                     <div className="order-card" key={order.order_id}>
                       <div>
                         <h4>Order #{order.order_id}</h4>

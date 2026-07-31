@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -17,6 +17,18 @@ function AuthContainer() {
   const [isSignIn, setIsSignIn] = useState(location.state?.mode !== "signup");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // If a protected request elsewhere in the app was blocked because the
+  // account is deactivated, api/axios.js redirects here and leaves a
+  // message behind for us to surface -- otherwise the sign-out would be
+  // silent and confusing.
+  useEffect(() => {
+    const notice = sessionStorage.getItem("authNotice");
+    if (notice) {
+      toast.error(notice);
+      sessionStorage.removeItem("authNotice");
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     full_name: "",
