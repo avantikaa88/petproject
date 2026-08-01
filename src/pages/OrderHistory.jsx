@@ -12,7 +12,7 @@ import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import "../styles/dashboard.css";
-import "../styles/orderHistory.css";
+import "../styles/orderhistory.css";
 
 const API_BASE = "http://localhost:5000/api";
 // Uploaded product images are stored as relative paths like "/uploads/xyz.png"
